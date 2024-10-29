@@ -5,10 +5,9 @@ use global_fn::{get_captcha, get_captcha_img};
 
 #[test]
 fn main() {
-    let a = Captcha::new(5,130,40);
+    let a = Captcha::new(5, 130, 40);
     println!("test:{},base_img:{}", a.text, a.base_img);
 }
-
 
 pub struct Captcha {
     pub text: String,
@@ -22,9 +21,6 @@ impl Captcha {
         let text = res.join("");
         //根据验证码字符数组生成图片并且把图片转化成base64字符串
         let base_img = get_captcha_img(res, width, height);
-        Captcha {
-            text,
-            base_img,
-        }
+        Captcha { text, base_img }
     }
 }

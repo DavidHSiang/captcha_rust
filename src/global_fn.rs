@@ -1,10 +1,12 @@
+use crate::basic_data::{BASIC_CHAR, BASIC_COLOR, SCALE, WHITE};
+use ab_glyph::FontRef;
+use base64::engine::general_purpose;
+use base64::Engine;
+use image::{DynamicImage, ImageFormat::Png};
 use image::{ImageBuffer, Rgb};
 use imageproc::drawing::{draw_cubic_bezier_curve_mut, draw_hollow_ellipse_mut, draw_text_mut};
 use rand::{thread_rng, Rng};
-use rusttype::Font;
-use crate::basic_data::{BASIC_CHAR, BASIC_COLOR, SCALE, WHITE};
-use image::ImageOutputFormat::Png;
-use image::DynamicImage;
+use std::io::Cursor;
 
 /***
  * 生成随机数
@@ -49,18 +51,17 @@ fn get_next(min: f32, max: u32) -> f32 {
 /****
  * 获取字体
  */
-fn get_font() -> Font<'static> {
-    let font = Vec::from(include_bytes!("../font/arial.ttf") as &[u8]);
-    Font::try_from_vec(font).unwrap()
-}
+// fn get_font() -> Font<'static> {
+//     let font = FontRef::try_from_slice(include_bytes!("../font/arial.ttf")).unwrap();
+//     // let font = Vec::from(include_bytes!("../font/arial.ttf") as &[u8]);
+//     font
+// }
 
 /****
  * 获取一个白色背景的图片
  */
 fn get_image(width: u32, height: u32) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
-    ImageBuffer::from_fn(width, height, |_, _| {
-        image::Rgb(WHITE)
-    })
+    ImageBuffer::from_fn(width, height, |_, _| image::Rgb(WHITE))
 }
 
 /****
@@ -73,7 +74,16 @@ fn cyclic_write_character(res: &[String], image: &mut ImageBuffer<Rgb<u8>, Vec<u
     let y = image.height() / 2 - 15;
     for (i, _) in res.iter().enumerate() {
         let text = &res[i];
-        draw_text_mut(image, get_color(), 5 + (i as u32 * c), y, SCALE, &get_font(), text);
+        let font = FontRef::try_from_slice(include_bytes!("../font/arial.ttf")).unwrap();
+        draw_text_mut(
+            image,
+            get_color(),
+            5 + (i as u32 * c) as i32,
+            y as i32,
+            SCALE,
+            &font,
+            text,
+        );
     }
 }
 
@@ -96,7 +106,14 @@ fn draw_interference_line(image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
     let ctrl_x2 = get_next((width / 4) as f32, width / 4 * 3);
     let ctrl_y2 = get_next(x1, height - 5);
     //随机画贝塞尔曲线
-    draw_cubic_bezier_curve_mut(image, (x1, y1), (x2, y2), (ctrl_x, ctrl_y), (ctrl_x2, ctrl_y2), get_color());
+    draw_cubic_bezier_curve_mut(
+        image,
+        (x1, y1),
+        (x2, y2),
+        (ctrl_x, ctrl_y),
+        (ctrl_x2, ctrl_y2),
+        get_color(),
+    );
 }
 
 /****
@@ -119,9 +136,9 @@ fn draw_interference_ellipse(num: usize, image: &mut ImageBuffer<Rgb<u8>, Vec<u8
  */
 fn to_base64_str(image: ImageBuffer<Rgb<u8>, Vec<u8>>) -> String {
     let base_img = DynamicImage::ImageRgb8(image);
-    let mut buf = vec![];
+    let mut buf = Cursor::new(vec![]);
     base_img.write_to(&mut buf, Png).unwrap();
-    let res_base64 = base64::encode(&buf);
+    let res_base64: String = general_purpose::STANDARD.encode(buf.get_ref());
     format!("data:image/png;base64,{}", res_base64)
 }
 
